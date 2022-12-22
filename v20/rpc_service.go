@@ -6,21 +6,16 @@ import (
 	"reflect"
 )
 
-// 实现这个接口，表示结构体可以被改造成 RPC 服务
-// 可以被改造成 RPC 服务的结构体里面应该都是方法
+// 实现这个接口，表示本地服务可以被改造成 RPC 服务
+// 可以被改造成 RPC 服务的本地服务（结构体）里面应该都是方法
 type I9RPCService interface {
+	// 获取本地服务对应的 RPC 服务的服务名
 	F8GetServiceName() string
-}
-
-// 可以发起 RPC 调用的客户端
-type I9RPCClient interface {
-	// 发起 RPC 调用
-	F8DoRPC(i9ctx context.Context, req *S6Request) (*S6Response, error)
 }
 
 // F8CoverWithRPC 把结构体改造成 RPC 服务
 // i9RPCService 一个可以被改造成 RPC 服务的结构体
-// i9client 可以发起 RPC 调用的客户端
+// i9RPCClient 可以发起 RPC 调用的客户端
 func F8CoverWithRPC(i9RPCService I9RPCService, i9RPCClient I9RPCClient) {
 	// 这里肯定是拿到一个接口（结构体指针）
 	i9RPCServiceValue := reflect.ValueOf(i9RPCService)
@@ -42,33 +37,36 @@ func F8CoverWithRPC(i9RPCService I9RPCService, i9RPCClient I9RPCClient) {
 		if !s6StructFieldValue.CanSet() {
 			continue
 		}
-		// 用原来的本地方法构造一个新的 RPC 调用的方法
+		// 用结构体原来的方法的信息构造一个新的 RPC 调用的方法
 		f8NewFunc := func(args []reflect.Value) (results []reflect.Value) {
 			// 处理方法的入参，这里只管第二个参数，第一个是 context
 			input := args[1].Interface()
 			// 处理方法的返回值，这里只管第一个参数，第二个是 error
 			output := reflect.New(s6StructFieldType.Out(0).Elem()).Interface()
+			// 把方法的入参编码，这里用的是 json
 			inputEncode, err := json.Marshal(input)
 			if err != nil {
 				return []reflect.Value{reflect.ValueOf(output), reflect.ValueOf(err)}
 			}
-			req := &S6Request{
-				ServiceName: i9RPCService.F8GetServiceName(),
-				MethodName:  s6StructField.Name,
-				Data:        inputEncode,
+			// 组装调用的请求数据
+			req := &S6RPCRequest{
+				ServiceName:             i9RPCService.F8GetServiceName(),
+				FunctionName:            s6StructField.Name,
+				FunctionInputEncodeData: inputEncode,
 			}
 			// 向远端发起调用
-			resp, err := i9RPCClient.F8DoRPC(args[0].Interface().(context.Context), req)
+			resp, err := i9RPCClient.F8SendRPC(args[0].Interface().(context.Context), req)
 			if err != nil {
 				return []reflect.Value{reflect.ValueOf(output), reflect.ValueOf(err)}
 			}
-			err = json.Unmarshal(resp.Data, output)
+			// 把返回的数据解码，这里用的是 json
+			err = json.Unmarshal(resp.FunctionOutputEncodeData, output)
 			if err != nil {
 				return []reflect.Value{reflect.ValueOf(output), reflect.ValueOf(err)}
 			}
 			return []reflect.Value{reflect.ValueOf(output), reflect.Zero(reflect.TypeOf(new(error)).Elem())}
 		}
-		// 把原来的本地方法替换掉
+		// 把结构体原来的方法替换成新构造的这个 RPC 调用的方法
 		s6StructFieldValue.Set(reflect.MakeFunc(s6StructFieldType, f8NewFunc))
 	}
 }
