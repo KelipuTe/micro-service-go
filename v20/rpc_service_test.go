@@ -45,11 +45,11 @@ func TestF8CoverWithRPC(p7s6t *testing.T) {
 				},
 			},
 			p7s6MockService: func() *s6MockI9RPCService {
-				p7RPCServiceClient := &S6UserRPCService{}
+				p7s6RPCService := &S6UserRPCService{}
 				return &s6MockI9RPCService{
-					i9RPCService: p7RPCServiceClient,
+					i9RPCService: p7s6RPCService,
 					f8SendRPC: func() (any, error) {
-						return p7RPCServiceClient.F8GetUserById(context.Background(), &S6F8GetUserByIdRequest{UserId: 11})
+						return p7s6RPCService.F8GetUserById(context.Background(), &S6F8GetUserByIdRequest{UserId: 11})
 					},
 				}
 			}(),
