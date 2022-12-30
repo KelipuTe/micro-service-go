@@ -2,27 +2,62 @@ package v20
 
 import (
 	"context"
-	"encoding/binary"
-	"encoding/json"
-	"errors"
 	"fmt"
-	"io"
 	"log"
+	"micro-service-go/v20/protocol"
+	"micro-service-go/v20/serialize"
 	"net"
 	"reflect"
 )
 
+// #### type ####
+
 // 可以处理 RPC 调用的服务端
 type S6RPCServer struct {
+	// 序列化
+	i9Serialize serialize.I9Serialize
+	// 协议
+	i9Protocol protocol.I9Protocol
 	// 本地服务
 	m3service map[string]*S6ReflectService
+
+	i9listener net.Listener
 }
 
-func F8NewS6RPCServer() *S6RPCServer {
-	return &S6RPCServer{
+// Option 设计模式
+type F8S6RPCServerOption func(*S6RPCServer)
+
+// #### func ####
+
+func F8NewS6RPCServer(s5Option ...F8S6RPCServerOption) *S6RPCServer {
+	p7s6server := &S6RPCServer{
 		m3service: make(map[string]*S6ReflectService, 4),
 	}
+	for _, t4value := range s5Option {
+		t4value(p7s6server)
+	}
+	if nil == p7s6server.i9Serialize {
+		p7s6server.i9Serialize = serialize.F8NewS6Json()
+	}
+	if nil == p7s6server.i9Protocol {
+		p7s6server.i9Protocol = protocol.F8NewS6Json()
+	}
+	return p7s6server
 }
+
+func F8SetS6RPCServerSerialize(i9Serializer serialize.I9Serialize) F8S6RPCServerOption {
+	return func(p7this *S6RPCServer) {
+		p7this.i9Serialize = i9Serializer
+	}
+}
+
+func F8SetS6RPCServerProtocol(i9Protocol protocol.I9Protocol) F8S6RPCServerOption {
+	return func(p7this *S6RPCServer) {
+		p7this.i9Protocol = i9Protocol
+	}
+}
+
+// #### struct func ####
 
 // 注册本地服务
 func (p7this *S6RPCServer) F8RegisterService(i9RPCService I9RPCService) {
@@ -35,18 +70,45 @@ func (p7this *S6RPCServer) F8RegisterService(i9RPCService I9RPCService) {
 }
 
 // 处理 rpc
-func (p7this *S6RPCServer) F8HandleRPC(i9ctx context.Context, p7s6req *S6RPCRequest) (*S6RPCResponse, error) {
-	p7s6resp := &S6RPCResponse{}
+func (p7this *S6RPCServer) F8HandleRPC(i9ctx context.Context, p7s6req *protocol.S6RPCRequest) (*protocol.S6RPCResponse, error) {
 	p7s6service, ok := p7this.m3service[p7s6req.ServiceName]
 	if !ok {
-		return p7s6resp, fmt.Errorf("server: 未找到服务, 服务名 %s", p7s6req.ServiceName)
+		return nil, fmt.Errorf("service [%s] not found", p7s6req.ServiceName)
 	}
 	respData, err := p7s6service.f8HandleRPC(i9ctx, p7s6req.FunctionName, p7s6req.FunctionInputEncodeData)
-	if err != nil {
-		return p7s6resp, err
+	if nil != err {
+		return nil, err
 	}
+	p7s6resp := &protocol.S6RPCResponse{}
 	p7s6resp.FunctionOutputEncodeData = respData
 	return p7s6resp, nil
+}
+
+func (p7this *S6RPCServer) f8HandleTCP(i9conn net.Conn) {
+	for {
+		s5ReqMsg, err := p7this.i9Protocol.F8ReadRespMsgFromTCP(i9conn)
+		if err != nil {
+			// 一旦从 TCP 读取数据发生异常，这个链接最好就是断掉，字节流的异常处理太麻烦了
+			log.Printf("f8HandleTCP F8ReadRespMsgFromTCP with: %s", err)
+			return
+		}
+		p7s6req, err := p7this.i9Protocol.F8DecodeReq(s5ReqMsg)
+		if err != nil {
+			log.Printf("f8HandleTCP F8DecodeReq with: %s", err)
+		}
+		p7s6resp, err := p7this.F8HandleRPC(context.Background(), p7s6req)
+		if err != nil {
+			log.Printf("f8HandleTCP F8HandleRPC with: %s", err)
+		}
+		s5RespMsg, err := p7this.i9Protocol.F8EncodeResp(p7s6resp)
+		if err != nil {
+			log.Printf("f8HandleTCP F8EncodeResp with: %s", err)
+		}
+		_, err = i9conn.Write(s5RespMsg)
+		if err != nil {
+			log.Printf("f8HandleTCP Write with: %s", err)
+		}
+	}
 }
 
 func (p7this *S6RPCServer) F8Start(address string) error {
@@ -54,62 +116,12 @@ func (p7this *S6RPCServer) F8Start(address string) error {
 	if nil != err {
 		return err
 	}
+	p7this.i9listener = i9listener
 	for {
 		i9conn, err2 := i9listener.Accept()
 		if nil != err2 {
-			log.Printf("accept with err: %s", err2)
+			log.Printf("F8Start Accept with : %s", err2)
 		}
 		go p7this.f8HandleTCP(i9conn)
 	}
-}
-
-// 消息长度的长度
-const c5LenOfMsgLen int = 8
-
-func (p7this *S6RPCServer) f8HandleTCP(i9conn net.Conn) {
-	for {
-		s5ReqMsg, err := p7this.readFromTcp(i9conn)
-		if err != nil {
-			return
-		}
-		p7s6req := &S6RPCRequest{}
-		_ = json.Unmarshal(s5ReqMsg, p7s6req)
-		log.Printf("%s,%+v", string(s5ReqMsg), p7s6req)
-		p7s6resp, err := p7this.F8HandleRPC(context.Background(), p7s6req)
-		s5RespMsg, _ := json.Marshal(p7s6resp)
-		log.Printf("%+v,%s", p7s6resp, string(s5RespMsg))
-		err = p7this.writeToTcp(i9conn, s5RespMsg)
-		if err != nil {
-			fmt.Printf("sending response failed: %v", err)
-		}
-	}
-}
-
-func (p7this *S6RPCServer) readFromTcp(i9conn net.Conn) (s5msg []byte, err error) {
-	s5MsgLen := make([]byte, c5LenOfMsgLen)
-	readLen, err := i9conn.Read(s5MsgLen)
-	defer func() {
-		if err2 := recover(); err2 != nil {
-			log.Printf("tcp connection panic with : %v", err2)
-			err = errors.New(fmt.Sprintf("tcp connection panic with : %v", err2))
-		}
-	}()
-	if err != nil {
-		return nil, err
-	}
-	if c5LenOfMsgLen != readLen {
-		return nil, errors.New("could not read the length data")
-	}
-	msgLen := binary.BigEndian.Uint64(s5MsgLen)
-	s5msg = make([]byte, msgLen)
-	_, err = io.ReadFull(i9conn, s5msg)
-	return s5msg, err
-}
-
-func (p7this *S6RPCServer) writeToTcp(i9conn net.Conn, s5msg []byte) error {
-	encode := make([]byte, c5LenOfMsgLen+len(s5msg))
-	binary.BigEndian.PutUint64(encode[:c5LenOfMsgLen], uint64(len(s5msg)))
-	copy(encode[8:], s5msg)
-	i9conn.Write(encode)
-	return nil
 }

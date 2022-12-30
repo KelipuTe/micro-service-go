@@ -3,18 +3,30 @@ package v20
 import (
 	"context"
 	"github.com/stretchr/testify/assert"
+	"micro-service-go/v20/protocol"
+	"micro-service-go/v20/serialize"
 	"testing"
 )
 
 type s6MockI9RPCClient struct {
-	p7s6t    *testing.T
-	p7s6req  *S6RPCRequest
-	p7s6resp *S6RPCResponse
-	err      error
+	p7s6t       *testing.T
+	i9serialize serialize.I9Serialize
+	i9protocol  protocol.I9Protocol
+	p7s6req     *protocol.S6RPCRequest
+	p7s6resp    *protocol.S6RPCResponse
+	err         error
 }
 
-func (p7this *s6MockI9RPCClient) F8SendRPC(i9ctx context.Context, req *S6RPCRequest) (*S6RPCResponse, error) {
-	assert.Equal(p7this.p7s6t, p7this.p7s6req, req)
+func (p7this *s6MockI9RPCClient) F8GetI9Serialize() serialize.I9Serialize {
+	return p7this.i9serialize
+}
+
+func (p7this *s6MockI9RPCClient) F8GetI9Protocol() protocol.I9Protocol {
+	return p7this.i9protocol
+}
+
+func (p7this *s6MockI9RPCClient) F8SendRPC(i9ctx context.Context, p7s6req *protocol.S6RPCRequest) (*protocol.S6RPCResponse, error) {
+	assert.Equal(p7this.p7s6t, p7this.p7s6req, p7s6req)
 	return p7this.p7s6resp, p7this.err
 }
 
@@ -34,13 +46,14 @@ func TestF8CoverWithRPC(p7s6t *testing.T) {
 		{
 			name: "user_rpc_service_client",
 			p7s6MockClient: &s6MockI9RPCClient{
-				p7s6t: p7s6t,
-				p7s6req: &S6RPCRequest{
+				p7s6t:       p7s6t,
+				i9serialize: serialize.F8NewS6Json(),
+				p7s6req: &protocol.S6RPCRequest{
 					ServiceName:             "user-rpc-service",
 					FunctionName:            "F8GetUserById",
 					FunctionInputEncodeData: []byte(`{"userId":11}`),
 				},
-				p7s6resp: &S6RPCResponse{
+				p7s6resp: &protocol.S6RPCResponse{
 					FunctionOutputEncodeData: []byte(`{"userId":11,"userName":"aa"}`),
 				},
 			},
@@ -62,7 +75,7 @@ func TestF8CoverWithRPC(p7s6t *testing.T) {
 
 	for _, s6case := range s5s6case {
 		p7s6t.Run(s6case.name, func(p7s6t2 *testing.T) {
-			F8CoverWithRPC(s6case.p7s6MockService.i9RPCService, s6case.p7s6MockClient)
+			F8CoverWithRPC(s6case.p7s6MockClient, s6case.p7s6MockService.i9RPCService)
 			resp, err := s6case.p7s6MockService.f8SendRPC()
 			assert.Equal(p7s6t2, s6case.wantErr, err)
 			if err != nil {

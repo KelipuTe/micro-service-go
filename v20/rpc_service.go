@@ -2,7 +2,7 @@ package v20
 
 import (
 	"context"
-	"encoding/json"
+	"micro-service-go/v20/protocol"
 	"reflect"
 )
 
@@ -14,9 +14,9 @@ type I9RPCService interface {
 }
 
 // F8CoverWithRPC 把结构体改造成 RPC 服务
-// i9RPCService 一个可以被改造成 RPC 服务的结构体
 // i9RPCClient 可以发起 RPC 调用的客户端
-func F8CoverWithRPC(i9RPCService I9RPCService, i9RPCClient I9RPCClient) {
+// i9RPCService 一个可以被改造成 RPC 服务的结构体
+func F8CoverWithRPC(i9RPCClient I9RPCClient, i9RPCService I9RPCService) {
 	// 这里肯定是拿到一个接口（结构体指针）
 	i9RPCServiceValue := reflect.ValueOf(i9RPCService)
 	// 通过结构体指针拿到结构体值
@@ -43,13 +43,14 @@ func F8CoverWithRPC(i9RPCService I9RPCService, i9RPCClient I9RPCClient) {
 			input := args[1].Interface()
 			// 处理方法的返回值，这里只管第一个参数，第二个是 error
 			output := reflect.New(s6StructFieldType.Out(0).Elem()).Interface()
-			// 把方法的入参编码，这里用的是 json
-			inputEncode, err := json.Marshal(input)
+			// 把方法的入参序列化
+			i9serialize := i9RPCClient.F8GetI9Serialize()
+			inputEncode, err := i9serialize.F8Encode(input)
 			if err != nil {
 				return []reflect.Value{reflect.ValueOf(output), reflect.ValueOf(err)}
 			}
 			// 组装调用的请求数据
-			req := &S6RPCRequest{
+			req := &protocol.S6RPCRequest{
 				ServiceName:             i9RPCService.F8GetServiceName(),
 				FunctionName:            s6StructField.Name,
 				FunctionInputEncodeData: inputEncode,
@@ -59,8 +60,8 @@ func F8CoverWithRPC(i9RPCService I9RPCService, i9RPCClient I9RPCClient) {
 			if err != nil {
 				return []reflect.Value{reflect.ValueOf(output), reflect.ValueOf(err)}
 			}
-			// 把返回的数据解码，这里用的是 json
-			err = json.Unmarshal(resp.FunctionOutputEncodeData, output)
+			// 把返回的数据反序列化
+			err = i9serialize.F8Decode(resp.FunctionOutputEncodeData, output)
 			if err != nil {
 				return []reflect.Value{reflect.ValueOf(output), reflect.ValueOf(err)}
 			}

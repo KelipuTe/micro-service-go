@@ -3,6 +3,7 @@ package v20
 import (
 	"context"
 	"github.com/stretchr/testify/assert"
+	"micro-service-go/v20/protocol"
 	"testing"
 )
 
@@ -10,8 +11,8 @@ func TestF8HandleRPC(p7s6t *testing.T) {
 	s5s6case := []struct {
 		name           string
 		p7s6RPCServer  *S6RPCServer
-		p7s6RPCRequest *S6RPCRequest
-		wantResp       *S6RPCResponse
+		p7s6RPCRequest *protocol.S6RPCRequest
+		wantResp       *protocol.S6RPCResponse
 		wantErr        error
 	}{
 		{
@@ -22,12 +23,12 @@ func TestF8HandleRPC(p7s6t *testing.T) {
 				p7s6server.F8RegisterService(p7s6UserService)
 				return p7s6server
 			}(),
-			p7s6RPCRequest: &S6RPCRequest{
+			p7s6RPCRequest: &protocol.S6RPCRequest{
 				ServiceName:             "user-rpc-service",
 				FunctionName:            "F8GetUserById",
 				FunctionInputEncodeData: []byte(`{"userId":22}`),
 			},
-			wantResp: &S6RPCResponse{
+			wantResp: &protocol.S6RPCResponse{
 				FunctionOutputEncodeData: []byte(`{"userId":22,"userName":"bb"}`),
 			},
 		},
