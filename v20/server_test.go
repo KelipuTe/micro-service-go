@@ -26,10 +26,10 @@ func TestF8HandleRPC(p7s6t *testing.T) {
 			p7s6RPCRequest: &protocol.S6RPCRequest{
 				ServiceName:             "user-rpc-service",
 				FunctionName:            "F8GetUserById",
-				FunctionInputEncodeData: []byte(`{"userId":22}`),
+				FunctionInputDataEncode: []byte(`{"userId":22}`),
 			},
 			wantResp: &protocol.S6RPCResponse{
-				FunctionOutputEncodeData: []byte(`{"userId":22,"userName":"bb"}`),
+				FunctionOutputDataEncode: []byte(`{"userId":22,"userName":"bb"}`),
 			},
 		},
 	}

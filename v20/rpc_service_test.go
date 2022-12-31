@@ -51,10 +51,10 @@ func TestF8CoverWithRPC(p7s6t *testing.T) {
 				p7s6req: &protocol.S6RPCRequest{
 					ServiceName:             "user-rpc-service",
 					FunctionName:            "F8GetUserById",
-					FunctionInputEncodeData: []byte(`{"userId":11}`),
+					FunctionInputDataEncode: []byte(`{"userId":11}`),
 				},
 				p7s6resp: &protocol.S6RPCResponse{
-					FunctionOutputEncodeData: []byte(`{"userId":11,"userName":"aa"}`),
+					FunctionOutputDataEncode: []byte(`{"userId":11,"userName":"aa"}`),
 				},
 			},
 			p7s6MockService: func() *s6MockI9RPCService {

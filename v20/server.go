@@ -75,21 +75,21 @@ func (p7this *S6RPCServer) F8HandleRPC(i9ctx context.Context, p7s6req *protocol.
 	if !ok {
 		return nil, fmt.Errorf("service [%s] not found", p7s6req.ServiceName)
 	}
-	respData, err := p7s6service.f8HandleRPC(i9ctx, p7s6req.FunctionName, p7s6req.FunctionInputEncodeData)
+	respData, err := p7s6service.f8HandleRPC(i9ctx, p7s6req.FunctionName, p7s6req.FunctionInputDataEncode)
 	if nil != err {
 		return nil, err
 	}
 	p7s6resp := &protocol.S6RPCResponse{}
-	p7s6resp.FunctionOutputEncodeData = respData
+	p7s6resp.FunctionOutputDataEncode = respData
 	return p7s6resp, nil
 }
 
 func (p7this *S6RPCServer) f8HandleTCP(i9conn net.Conn) {
 	for {
-		s5ReqMsg, err := p7this.i9Protocol.F8ReadRespMsgFromTCP(i9conn)
+		s5ReqMsg, err := p7this.i9Protocol.F8ReadReqMsgFromTCP(i9conn)
 		if err != nil {
 			// 一旦从 TCP 读取数据发生异常，这个链接最好就是断掉，字节流的异常处理太麻烦了
-			log.Printf("f8HandleTCP F8ReadRespMsgFromTCP with: %s", err)
+			log.Printf("f8HandleTCP F8ReadReqMsgFromTCP with: %s", err)
 			return
 		}
 		p7s6req, err := p7this.i9Protocol.F8DecodeReq(s5ReqMsg)

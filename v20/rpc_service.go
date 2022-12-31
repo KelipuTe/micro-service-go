@@ -49,19 +49,27 @@ func F8CoverWithRPC(i9RPCClient I9RPCClient, i9RPCService I9RPCService) {
 			if err != nil {
 				return []reflect.Value{reflect.ValueOf(output), reflect.ValueOf(err)}
 			}
+			// 从 context 获取元数据
+			m3ExtraData := map[string]string{}
+			i9ctx := args[0].Interface()
+			if i9ctxValue, ok := i9ctx.(context.Context); ok {
+				m3ExtraData["flowId"] = i9ctxValue.Value("flowId").(string)
+			}
 			// 组装调用的请求数据
-			req := &protocol.S6RPCRequest{
+			p7s6req := &protocol.S6RPCRequest{
 				ServiceName:             i9RPCService.F8GetServiceName(),
 				FunctionName:            s6StructField.Name,
-				FunctionInputEncodeData: inputEncode,
+				M3MetaData:              m3ExtraData,
+				SerializeCode:           i9serialize.F8GetCode(),
+				FunctionInputDataEncode: inputEncode,
 			}
 			// 向远端发起调用
-			resp, err := i9RPCClient.F8SendRPC(args[0].Interface().(context.Context), req)
+			resp, err := i9RPCClient.F8SendRPC(args[0].Interface().(context.Context), p7s6req)
 			if err != nil {
 				return []reflect.Value{reflect.ValueOf(output), reflect.ValueOf(err)}
 			}
 			// 把返回的数据反序列化
-			err = i9serialize.F8Decode(resp.FunctionOutputEncodeData, output)
+			err = i9serialize.F8Decode(resp.FunctionOutputDataEncode, output)
 			if err != nil {
 				return []reflect.Value{reflect.ValueOf(output), reflect.ValueOf(err)}
 			}

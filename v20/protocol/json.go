@@ -63,13 +63,14 @@ func (this S6Json) F8DecodeResp(s5RespMsg []byte) (*S6RPCResponse, error) {
 }
 
 func (this S6Json) F8ReadReqMsgFromTCP(i9conn net.Conn) (s5ReqMsg []byte, err error) {
-	s5ReqMsgLen := make([]byte, c5LenOfJsonMsgLen)
-	readByteNum, err := i9conn.Read(s5ReqMsgLen)
 	defer func() {
 		if err2 := recover(); nil != err2 {
 			err = errors.New(fmt.Sprintf("tcp connection panic with : %v", err2))
 		}
 	}()
+
+	s5ReqMsgLen := make([]byte, c5LenOfJsonMsgLen)
+	readByteNum, err := i9conn.Read(s5ReqMsgLen)
 	if nil != err {
 		return nil, err
 	}
@@ -83,14 +84,15 @@ func (this S6Json) F8ReadReqMsgFromTCP(i9conn net.Conn) (s5ReqMsg []byte, err er
 }
 
 func (this S6Json) F8ReadRespMsgFromTCP(i9conn net.Conn) (s5RespMsg []byte, err error) {
-	s5RespMsgLen := make([]byte, c5LenOfJsonMsgLen)
-	readByteNum, err := i9conn.Read(s5RespMsgLen)
 	defer func() {
 		if err2 := recover(); nil != err2 {
 			// 因为这个地方要返回异常，所以返回值要用命名的
 			err = errors.New(fmt.Sprintf("tcp connection panic with : %v", err2))
 		}
 	}()
+
+	s5RespMsgLen := make([]byte, c5LenOfJsonMsgLen)
+	readByteNum, err := i9conn.Read(s5RespMsgLen)
 	if nil != err {
 		return nil, err
 	}
