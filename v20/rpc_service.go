@@ -68,6 +68,9 @@ func F8CoverWithRPC(i9RPCClient I9RPCClient, i9RPCService I9RPCService) {
 			if err != nil {
 				return []reflect.Value{reflect.ValueOf(output), reflect.ValueOf(err)}
 			}
+			if resp.Error != nil {
+				return []reflect.Value{reflect.ValueOf(output), reflect.ValueOf(resp.Error)}
+			}
 			// 把返回的数据反序列化
 			err = i9serialize.F8Decode(resp.FunctionOutputDataEncode, output)
 			if err != nil {

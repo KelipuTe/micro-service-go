@@ -36,11 +36,13 @@ func TestF8HandleRPC(p7s6t *testing.T) {
 
 	for _, t4value := range s5s6case {
 		p7s6t.Run(t4value.name, func(p7s6t2 *testing.T) {
-			resp, err := t4value.p7s6RPCServer.F8HandleRPC(context.Background(), t4value.p7s6RPCRequest)
+			resp := &protocol.S6RPCResponse{}
+			functionOutputDataEncode, err := t4value.p7s6RPCServer.F8HandleRPC(context.Background(), t4value.p7s6RPCRequest)
 			assert.Equal(p7s6t2, t4value.wantErr, err)
 			if err != nil {
 				return
 			}
+			resp.FunctionOutputDataEncode = functionOutputDataEncode
 			assert.Equal(p7s6t2, t4value.wantResp, resp)
 		})
 	}

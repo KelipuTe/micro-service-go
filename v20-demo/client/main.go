@@ -16,6 +16,6 @@ func main() {
 
 	i9ctx := context.Background()
 	i9ctx = context.WithValue(i9ctx, "flowId", "flowId12345678")
-	resp, err := p7s6RPCService.F8GetUserById(i9ctx, &v20.S6F8GetUserByIdRequest{UserId: 11})
+	resp, err := p7s6RPCService.F8GetUserById(i9ctx, &v20.S6F8GetUserByIdRequest{UserId: 33})
 	fmt.Println(resp, err)
 }
